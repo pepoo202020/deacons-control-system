@@ -6,10 +6,12 @@ import { ThemeSelector } from "@/components/common/theme-selector";
 import { checkAuthStatus } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { LoginForm } from "@/components/forms/login";
+import Logo from "@/components/common/logo";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { language } = useLanguage();
+  const { language, isRTL } = useLanguage();
   useEffect(() => {
     if (checkAuthStatus()) {
       router.push("/dashboard`");
@@ -20,6 +22,10 @@ export default function LoginPage() {
       <div className="flex items-center justify-between">
         <ThemeSelector lang={language} />
         <LanguageSelector />
+      </div>
+      <div className="flex-1 flex flex-col gap-5 items-center justify-center">
+        <Logo size="large" language={language} />
+        <LoginForm isRTL={isRTL} language={language} />
       </div>
     </div>
   );
