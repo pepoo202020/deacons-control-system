@@ -5,7 +5,7 @@ import { SPLASH_SCREEN_DATA } from "@/constants/splash-screen.data";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "../common/language-provider";
 import { checkAuthStatus } from "@/lib/auth";
-import { RiLoader2Fill } from "react-icons/ri";
+import { Loader2 } from "lucide-react";
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -38,7 +38,7 @@ export default function SplashScreen() {
           {SPLASH_SCREEN_DATA.mainSubTitle[language]}
         </h1>
         <div className="flex items-center justify-center">
-          <RiLoader2Fill className="h-8 w-8 animate-spin text-white/70" />
+          <Loader2 className="h-8 w-8 animate-spin text-white/70" />
         </div>
       </div>
       <div className="flex flex-col items-center font-light space-y-1 p-2">
