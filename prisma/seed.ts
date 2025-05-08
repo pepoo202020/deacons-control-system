@@ -5,17 +5,15 @@ import {
   TermStatus,
   ReviewStatus,
   NotificationType,
-  AuditAction,
   Level,
   Class,
   Term,
   SubjectType,
   Subject,
   Teacher,
-  ControllerClass,
   Controller,
   Student,
-} from "@/app/generated/prisma";
+} from "@/prisma/generated/prisma";
 import * as bcrypt from "bcryptjs";
 import { faker } from "@faker-js/faker";
 

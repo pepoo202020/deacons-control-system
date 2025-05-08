@@ -1,3 +1,9 @@
+import SplashScreen from "@/components/splash-screen/splash-screen";
+
 export default function Home() {
-  return <main>main page</main>;
+  return (
+    <main>
+      <SplashScreen />
+    </main>
+  );
 }
