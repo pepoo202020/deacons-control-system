@@ -7,7 +7,7 @@ import { LANGUAGE_SELECTOR_DATA } from "@/constants/language-selector.data";
 import { Languages } from "lucide-react";
 
 export function LanguageSelector() {
-  const { language, setLanguage, isRTL } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const [mounted, setMounted] = useState<boolean>(false);
 
   // After mounting, we have access to the window object
