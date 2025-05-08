@@ -1,0 +1,498 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ====================== ENUMS ====================
+enum UserRole {
+  ADMIN
+  TEACHER
+  CONTROLLER
+  STUDENT
+}
+
+enum QualificationStatus {
+  QUALIFIED
+  NOT_QUALIFIED
+}
+
+enum TermStatus {
+  NOT_STARTED
+  TEACHING
+  EXAMS
+  GRADING
+  REVIEW
+  RESULTS
+  COMPLAINTS
+  CLOSED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NotificationType {
+  GRADE_SUBMITTED
+  TERM_CHANGED
+  REVIEW_REQUESTED
+  REVIEW_RESOLVED
+  GENERAL
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum SettingKey {
+  QUALIFICATION_THRESHOLD
+  BEHAVIOR_MAX_SCORE
+  ENABLE_GRADE_ENTRY
+  ENABLE_REVIEW_REQUESTS
+  ENABLE_COMPLAINTS
+  CURRENT_TERM
+}
+
+// =========================== MODELS ===========================
+model User {
+  // Represents all types of users: Admin, Teacher, Controller, Student.
+  id                    String               @id @default(uuid()) //Unique ID
+  name                  String // user name
+  username              String               @unique //Unique login username
+  email                 String?              @unique //Email (optional, mainly for admin/teacher/controller)
+  password              String //Hashed password
+  role                  UserRole //Enum - ADMIN | TEACHER | CONTROLLER | STUDENT
+  picture               String?              @default("https://png.pngtree.com/png-clipart/20221231/original/pngtree-cartoon-style-male-user-profile-icon-vector-illustraton-png-image_8836451.png") //Profile image
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  // relations
+  student               Student?
+  teacher               Teacher?
+  controller            Controller?
+  auditTrails           AuditTrail[]
+  receivedNotifications Notification[]       @relation("ReceivedNotifications")
+  sentNotifications     Notification[]       @relation("SentNotifications")
+  reviewedRequests      GradeReviewRequest[] @relation("ReviewedBy")
+  loginHistory          LoginHistory[]
+  GradeHistory          GradeHistory[]
+
+  @@index([role])
+  @@map("user")
+}
+
+model Student {
+  // Linked to User, represents a registered child.
+  id                         String               @id @default(uuid()) // Unique ID
+  userId                     String               @unique // Relation to User
+  currentLevel               String // Current school level (e.g., "Grade 1", "Grade 2")
+  classId                    String? //Relation to Class
+  initialQualificationStatus QualificationStatus //QUALIFIED | NOT_QUALIFIED (for each year)
+  deleted                    Boolean              @default(false)
+  deletedAt                  DateTime?
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+  // relations
+  user                       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class                      Class?               @relation(fields: [classId], references: [id])
+  grades                     Grade[]
+  archivedResults            ArchivedResult[]
+  reviewRequests             GradeReviewRequest[]
+  Attendance                 Attendance[]
+
+  @@map("student")
+}
+
+model Teacher {
+  // Linked to User, represents teaching role
+  id        String           @id @default(uuid()) //Unique ID
+  userId    String           @unique //Relation to User
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  // relations
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classes   ClassTeacher[] // List of subjects they teach
+  subjects  TeacherSubject[] // List of classes they teach in
+
+  @@map("teacher")
+}
+
+model Controller {
+  // Linked to User, used for managing grades per class
+  id        String            @id @default(uuid()) //Unique ID
+  userId    String            @unique //Relation to User
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  // relations
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classes   ControllerClass[] //Array of Class IDs they control
+  grades    Grade[]
+
+  @@map("controller")
+}
+
+// Note: If user is ADMIN, skip assigning as controller.
+
+model Level {
+  id                 String    @id @default(uuid())
+  name               String
+  description        String?
+  years              Int       @default(2)
+  attendanceRules    Json?
+  hasTasbhaAbsence   Boolean   @default(false)
+  hasOccasionAbsence Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  // relations
+  subjects           Subject[]
+  terms              Term[]
+  classes            Class[]
+
+  @@map("level")
+}
+
+model Term {
+  id                  String           @id @default(uuid())
+  termNumber          Int
+  levelId             String
+  startDate           DateTime // Fixed typo from startData to startDate
+  endDate             DateTime
+  status              TermStatus       @default(NOT_STARTED)
+  allowGradeEntry     Boolean          @default(false)
+  allowReviewRequests Boolean          @default(false)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  // relations
+  level               Level            @relation(fields: [levelId], references: [id])
+  subjects            Subject[] // Fixed relation name
+  grades              Grade[] // Fixed relation name
+  archivedGrades      ArchivedGrade[] // Fixed relation name
+  academicTerms       AcademicTerm[] // Fixed relation name
+  systemSettings      SystemSettings[]
+
+  @@unique([levelId, termNumber])
+  @@map("term")
+}
+
+model Class {
+  // Represents a specific classroom (e.g., Grade 2, Class A).
+  id          String            @id @default(uuid()) //Unique ID
+  name        String //name: Class name (e.g., "Class A", "Fasl 2")
+  levelId     String //School level
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  // relations
+  level       Level             @relation(fields: [levelId], references: [id])
+  students    Student[] //Relation to multiple Students
+  teachers    ClassTeacher[] //Relation to multiple Teachers
+  controllers ControllerClass[]
+  Subject     Subject[]
+
+  @@map("class")
+}
+
+model ClassTeacher {
+  id        String   @id @default(uuid())
+  classId   String
+  teacherId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // relations
+  class     Class    @relation(fields: [classId], references: [id])
+  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+
+  @@unique([classId, teacherId])
+  @@map("class_teacher")
+}
+
+model ControllerClass {
+  id           String     @id @default(uuid())
+  classId      String
+  controllerId String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  // relations
+  class        Class      @relation(fields: [classId], references: [id])
+  controller   Controller @relation(fields: [controllerId], references: [id])
+
+  @@unique([classId, controllerId])
+  @@map("controller_class")
+}
+
+model Subject {
+  id          String           @id @default(uuid())
+  name        String
+  levelId     String
+  maxScore    Float
+  classId     String
+  termId      String
+  type        String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  // relations
+  level       Level            @relation(fields: [levelId], references: [id])
+  term        Term             @relation(fields: [termId], references: [id])
+  class       Class            @relation(fields: [classId], references: [id])
+  grades      Grade[]
+  teachers    TeacherSubject[]
+  SubjectType SubjectType      @relation(fields: [type], references: [id])
+  SubjectPart SubjectPart[]
+
+  @@index([termId])
+  @@map("subject") // Fixed map name from "subjects" to "subject" for consistency
+}
+
+model TeacherSubject {
+  id        String   @id @default(uuid())
+  teacherId String
+  subjectId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // relations
+  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+
+  @@unique([teacherId, subjectId])
+  @@map("teacher_subject")
+}
+
+model Grade {
+  id             String               @id @default(uuid())
+  studentId      String
+  subjectId      String
+  termId         String
+  score          Float
+  qualified      QualificationStatus
+  controllerId   String
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  // relations
+  student        Student              @relation(fields: [studentId], references: [id])
+  subject        Subject              @relation(fields: [subjectId], references: [id])
+  term           Term                 @relation(fields: [termId], references: [id])
+  controller     Controller           @relation(fields: [controllerId], references: [id])
+  auditTrails    AuditTrail[]
+  reviewRequests GradeReviewRequest[]
+  GradeHistory   GradeHistory[]
+
+  @@unique([studentId, subjectId, termId])
+  @@index([studentId])
+  @@map("grade")
+}
+
+model ArchivedResult {
+  id             String              @id @default(uuid())
+  studentId      String
+  year           String
+  finalStatus    QualificationStatus
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  // relations
+  student        Student             @relation(fields: [studentId], references: [id])
+  archivedGrades ArchivedGrade[]
+
+  @@unique([studentId, year])
+  @@map("archived_result")
+}
+
+model ArchivedGrade {
+  id               String              @id @default(uuid())
+  archivedResultId String
+  subjectName      String
+  termId           String
+  score            Float
+  qualified        QualificationStatus
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  // relations
+  archivedResult   ArchivedResult      @relation(fields: [archivedResultId], references: [id])
+  term             Term                @relation(fields: [termId], references: [id])
+
+  @@map("archived_grade")
+}
+
+model AcademicTerm {
+  id        String     @id @default(uuid())
+  year      String
+  termId    String
+  status    TermStatus @default(NOT_STARTED)
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  // relations
+  term      Term       @relation(fields: [termId], references: [id])
+
+  @@unique([year, termId])
+  @@map("academic_term")
+}
+
+model Attendance {
+  id         String   @id @default(uuid())
+  studentId  String
+  date       DateTime
+  status     String // Present, Absent
+  isTasbha   Boolean  @default(false)
+  isOccasion Boolean  @default(false)
+  reason     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  // relations
+  student    Student  @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, date])
+  @@map("attendance")
+}
+
+model GradeReviewRequest {
+  id           String       @id @default(uuid())
+  studentId    String
+  gradeId      String
+  message      String
+  status       ReviewStatus @default(PENDING)
+  reviewedById String?
+  submittedAt  DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  // relations
+  student      Student      @relation(fields: [studentId], references: [id])
+  grade        Grade        @relation(fields: [gradeId], references: [id])
+  reviewedBy   User?        @relation("ReviewedBy", fields: [reviewedById], references: [id])
+
+  @@map("grade_review_request")
+}
+
+model Notification {
+  id         String           @id @default(uuid())
+  receiverId String
+  senderId   String?
+  type       NotificationType
+  message    String
+  seen       Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  // relation
+  receiver   User             @relation("ReceivedNotifications", fields: [receiverId], references: [id])
+  sender     User?            @relation("SentNotifications", fields: [senderId], references: [id])
+
+  @@map("notification")
+}
+
+model AuditTrail {
+  id        String      @id @default(uuid())
+  action    AuditAction
+  gradeId   String?
+  userId    String
+  details   Json?
+  timestamp DateTime    @default(now())
+  // relations
+  grade     Grade?      @relation(fields: [gradeId], references: [id])
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([timestamp])
+  @@map("audit_trail")
+}
+
+// New models based on requirements
+
+model SystemSettings {
+  id              String            @id @default(uuid())
+  termId          String?
+  key             SettingKey
+  value           Json
+  description     String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  // relations
+  term            Term?             @relation(fields: [termId], references: [id], onDelete: Cascade)
+  SettingCategory SettingCategory[] @relation("CategorySettings")
+
+  @@unique([termId, key])
+  @@map("system_settings")
+}
+
+model LoginHistory {
+  id         String   @id @default(uuid())
+  userId     String
+  ipAddress  String?
+  device     String?
+  location   String?
+  success    Boolean  @default(false)
+  userAgent  String
+  loggedInAt DateTime @default(now())
+  // relations
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("login_history")
+}
+
+// for tracking system-wide events
+model EventLog {
+  id        String   @id @default(uuid())
+  category  String
+  message   String
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([category, createdAt])
+  @@map("event_log")
+}
+
+// if you categorize system settings
+model SettingCategory {
+  id          String           @id @default(uuid())
+  name        String
+  description String?
+  settings    SystemSettings[] @relation("CategorySettings")
+
+  @@map("setting_category")
+}
+
+model GradeHistory {
+  id        String   @id @default(uuid())
+  gradeId   String
+  oldScore  Float
+  newScore  Float
+  reason    String?
+  changedBy String
+  changedAt DateTime @default(now())
+  // relations
+  grade     Grade    @relation(fields: [gradeId], references: [id])
+  user      User     @relation(fields: [changedBy], references: [id])
+
+  @@map("grade_history")
+}
+
+model SubjectType {
+  id          String    @id @default(uuid())
+  name        String
+  description String
+  subjects    Subject[]
+
+  @@map("subject_type")
+}
+
+model SubjectPart {
+  id        String   @id @default(uuid())
+  name      String
+  maxScore  Int
+  subjectId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // relations
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+
+  @@map("subject_part")
+}
