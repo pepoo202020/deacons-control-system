@@ -163,5 +163,5 @@
 }
 
 .global-submit-btn {
-  @apply bg-blue-950 dark:bg-white text-white dark:text-blue-950 w-full cursor-pointer border border-blue-950 dark:border-white hover:bg-transparent hover:text-blue-950 dark:hover:bg-blue-950 dark:hover:text-white rounded-md px-4 py-2 font-semibold transition duration-300 ease-in-out;
+  @apply bg-blue-950 dark:bg-white text-white dark:text-blue-950 w-full cursor-pointer border border-blue-950 dark:border-white hover:bg-transparent hover:text-blue-950 dark:hover:bg-blue-950 dark:hover:text-white rounded-md px-5 py-5 font-semibold transition duration-300 ease-in-out;
 }

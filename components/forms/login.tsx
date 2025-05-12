@@ -24,6 +24,11 @@ import {
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
+import { useState } from "react";
+import { login } from "@/actions/auth.actions";
+import { toast } from "sonner";
+import { signIn } from "next-auth/react";
+import { clientLogin } from "@/lib/auth";
 
 interface LoginFormProps {
   isRTL: boolean;
@@ -33,6 +38,8 @@ interface LoginFormProps {
 export const LoginForm = ({ isRTL, language = "AR" }: LoginFormProps) => {
   const router = useRouter();
   const loginSchema = getLoginSchema(language);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -41,8 +48,37 @@ export const LoginForm = ({ isRTL, language = "AR" }: LoginFormProps) => {
       stayLogged: false,
     },
   });
-  function handleSubmit(data: z.infer<typeof loginSchema>) {
-    console.log(data);
+  async function handleSubmit(data: z.infer<typeof loginSchema>) {
+    try {
+      setIsLoading(true);
+
+      // First, validate on the server
+      const serverResult = await login(data, language);
+
+      if (serverResult.success) {
+        // If server validation passes, perform client-side login
+        const clientResult = await clientLogin(
+          data.email,
+          data.password,
+          data.stayLogged
+        );
+
+        if (clientResult?.ok) {
+          toast.success(LOGIN_PAGE_DATA.response.success.message[language]);
+          router.push("/dashboard");
+          router.refresh();
+        } else {
+          toast.error(LOGIN_PAGE_DATA.response.error.unknown.message[language]);
+        }
+      } else {
+        toast.error(serverResult.message);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(LOGIN_PAGE_DATA.response.error.unknown.message[language]);
+    } finally {
+      setIsLoading(false);
+    }
   }
   return (
     <Card className="w-full max-w-xl shadow-2xl">
@@ -134,8 +170,14 @@ export const LoginForm = ({ isRTL, language = "AR" }: LoginFormProps) => {
                 </FormItem>
               )}
             />
-            <Button className="global-submit-btn" type="submit">
-              Submit
+            <Button
+              disabled={isLoading}
+              className="global-submit-btn text-xl"
+              type="submit"
+            >
+              {isLoading
+                ? LOGIN_PAGE_DATA.buttons.loading[language]
+                : LOGIN_PAGE_DATA.buttons.login[language]}
             </Button>
           </form>
         </Form>

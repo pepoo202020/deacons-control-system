@@ -1,20 +1,27 @@
-export const checkAuthStatus = (): boolean => {
-  // Check localStorage for user data
-  const userData = localStorage.getItem("user");
-  if (userData) {
-    try {
-      const user = JSON.parse(userData);
-      return Boolean(user && user.id);
-    } catch (e) {
-      // Invalid JSON in localStorage
-      return false;
-    }
-  }
-  // Check for authentication cookie as fallback
-  const cookies = document.cookie.split(";");
-  const authCookie = cookies.find((cookie) =>
-    cookie.trim().startsWith("authToken=")
-  );
+"use client";
 
-  return Boolean(authCookie);
-};
+import { signIn, signOut } from "next-auth/react";
+
+export async function clientLogin(
+  email: string,
+  password: string,
+  stayLogged?: boolean
+) {
+  try {
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+      stayLogged,
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error in client login:", error);
+    throw error;
+  }
+}
+
+export async function clientLogout() {
+  await signOut();
+}

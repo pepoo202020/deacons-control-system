@@ -36,4 +36,47 @@ export const LOGIN_PAGE_DATA = {
       stayLogged: { EN: "stay logged in", AR: "ابقى متصلًا" },
     },
   },
+  response: {
+    error: {
+      invalidFields: {
+        title: { EN: "Invalid Fields", AR: "الحقول غير صالحة" },
+        message: {
+          EN: "you entered invalid fields, please check it first.",
+          AR: "لقد أدخلت حقولًا غير صالحة، يرجى التحقق منها أولاً.",
+        },
+      },
+      unknown: {
+        title: { EN: "Unknown Error", AR: "خطأ غير معروف" },
+        message: {
+          EN: "an unknown error occurred during login to your account, Please try again.",
+          AR: "خطأ غير معروف في تسجيل الدخول إلى حسابك، يرجى المحاولة مرة أخرى.",
+        },
+      },
+      userNotFound: {
+        title: { EN: "User Not Found", AR: "المستخدم غير موجود" },
+        message: {
+          EN: "the user you entered does not exist, Please try again.",
+          AR: "المستخدم الذي أدخلته غير موجود، يرجى المحاولة مرة أخرى.",
+        },
+      },
+      passwordError: {
+        title: { EN: "Password not match", AR: "كلمة المرور غير متطابقة" },
+        message: {
+          EN: "the password that you entered is not correct, please try again",
+          AR: "كلمة المرور التي أدخلتها غير صحيحة، يرجى المحاولة مرة أخرى",
+        },
+      },
+    },
+    success: {
+      title: { EN: "Logged In Successfully", AR: "تم تسجيل الدخول بنجاح" },
+      message: {
+        EN: "logged in successfully to your account",
+        AR: "تم تسجيل الدخول إلى حسابك بنجاح",
+      },
+    },
+  },
+  buttons: {
+    loading: { EN: "Submitting Login form", AR: "إرسال نموذج تسجيل الدخول" },
+    login: { EN: "Login", AR: "تسجيل الدخول" },
+  },
 };

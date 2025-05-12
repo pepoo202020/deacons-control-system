@@ -4,8 +4,8 @@ import Logo from "../common/logo";
 import { SPLASH_SCREEN_DATA } from "@/constants/splash-screen.data";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "../common/language-provider";
-import { checkAuthStatus } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
+import { checkUserAvailability } from "@/actions/auth.actions";
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -16,10 +16,9 @@ export default function SplashScreen() {
     const checkAuth = async () => {
       // Simulate a bit of delay for the splash screen to show
       await new Promise((resolve) => setTimeout(resolve, 2000));
+      const { user } = await checkUserAvailability();
 
-      const isAuthenticated = checkAuthStatus();
-
-      if (isAuthenticated) {
+      if (user) {
         router.push("/dashboard");
       } else {
         router.push("/login");

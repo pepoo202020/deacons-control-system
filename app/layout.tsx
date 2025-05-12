@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/common/theme-provider";
 import { LanguageProvider } from "@/components/common/language-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { SessionProvider } from "@/components/common/session-provider";
 
 const cairo = Cairo({
   subsets: ["latin", "arabic"],
@@ -26,19 +27,21 @@ export default function RootLayout({
       <html suppressHydrationWarning>
         <head />
         <body className={cairo.className}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <LanguageProvider>
-              <TooltipProvider>
-                <Toaster />
-                {children}
-              </TooltipProvider>
-            </LanguageProvider>
-          </ThemeProvider>
+          <SessionProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <LanguageProvider>
+                <TooltipProvider>
+                  <Toaster position="top-right" richColors />
+                  {children}
+                </TooltipProvider>
+              </LanguageProvider>
+            </ThemeProvider>
+          </SessionProvider>
         </body>
       </html>
     </>
